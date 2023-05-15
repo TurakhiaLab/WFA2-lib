@@ -348,7 +348,7 @@ void wavefront_compute_edit(
   wf_prev->offsets[hi] = WAVEFRONT_OFFSET_NULL;
   wf_prev->offsets[hi+1] = WAVEFRONT_OFFSET_NULL;
   // Allocate output wavefront
-  wavefront_t* const wf_curr = wavefront_slab_allocate(wf_aligner->wavefront_slab,lo-2,hi+2);
+  wavefront_t* const wf_curr = wavefront_slab_allocate(wf_aligner->wavefront_slab,lo-2,hi+2,false);
   wf_components->mwavefronts[score_curr] = wf_curr;
   wf_components->mwavefronts[score_curr]->lo = lo;
   wf_components->mwavefronts[score_curr]->hi = hi;

@@ -86,7 +86,8 @@ void wavefront_slab_set_mode(
 wavefront_t* wavefront_slab_allocate(
     wavefront_slab_t* const wavefront_slab,
     const int min_lo,
-    const int max_hi);
+    const int max_hi,
+    bool past_marking);
 void wavefront_slab_free(
     wavefront_slab_t* const wavefront_slab,
     wavefront_t* const wavefront);

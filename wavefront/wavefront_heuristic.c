@@ -283,10 +283,11 @@ void wavefront_heuristic_wfadaptive(
         wavefront,pattern_length,text_length,distances);
   }
   // Cut-off wavefront
+  wf_aligner->heuristic_criteria=min_distance;
   const int alignment_k = DPMATRIX_DIAGONAL(text_length,pattern_length);
   wf_heuristic_wfadaptive_reduce(
       wavefront,distances,min_distance,max_distance_threshold,
-      alignment_k,alignment_k);
+      INT_MIN,INT_MAX);
   // Set wait steps (don't repeat this heuristic often)
   wf_heuristic->steps_wait = wf_heuristic->steps_between_cutoffs;
 }
@@ -510,11 +511,14 @@ void wavefront_heuristic_cufoff(
     const int score,
     const int score_mod) {
   // Parameters
-  wavefront_components_t* const wf_components = &wf_aligner->wf_components;
+  wavefront_components_t* wf_components = &wf_aligner->wf_components;
+  if (score>=(wf_aligner->marking_score+wf_aligner->wf_components.max_score_scope)){
+    wf_components = &wf_aligner->wf_components_pass_marking;
+  }
   const distance_metric_t distance_metric = wf_aligner->penalties.distance_metric;
   wavefront_heuristic_t* const wf_heuristic = &wf_aligner->heuristic;
   // Fetch m-wavefront
-  wavefront_t* const mwavefront = wf_components->mwavefronts[score_mod];
+  wavefront_t* mwavefront = wf_components->mwavefronts[score_mod];
   if (mwavefront == NULL || mwavefront->lo > mwavefront->hi) return;
   // Decrease wait steps
   --(wf_heuristic->steps_wait);

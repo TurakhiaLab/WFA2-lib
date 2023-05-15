@@ -531,7 +531,9 @@ void wavefront_backtrace_pcigar(
     const int alignment_k,
     const int alignment_offset,
     const pcigar_t pcigar_last,
-    const bt_block_idx_t prev_idx_last) {
+    const bt_block_idx_t prev_idx_last,
+    bool add_last_indel
+    ) {
   // Parameters
   wf_backtrace_buffer_t* const bt_buffer =  wf_aligner->wf_components.bt_buffer;
   // Traceback pcigar-blocks
@@ -562,6 +564,6 @@ void wavefront_backtrace_pcigar(
         wf_aligner->text,wf_aligner->text_length,
         wf_aligner->match_funct,
         wf_aligner->match_funct_arguments,
-        begin_v,begin_h,end_v,end_h,wf_aligner->cigar);
+        begin_v,begin_h,end_v,end_h,wf_aligner->cigar,add_last_indel,wf_aligner->component_begin);
   }
 }

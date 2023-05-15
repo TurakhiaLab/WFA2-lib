@@ -58,6 +58,7 @@ void wavefront_backtrace_pcigar(
     const int alignment_k,
     const int alignment_offset,
     const pcigar_t pcigar_last,
-    const bt_block_idx_t prev_idx_last);
+    const bt_block_idx_t prev_idx_last,
+    bool add_last_indel);
 
 #endif /* WAVEFRONT_BACKTRACE_H_ */

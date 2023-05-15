@@ -324,7 +324,8 @@ void wf_backtrace_buffer_unpack_cigar_affine(
     const int begin_h,
     const int end_v,
     const int end_h,
-    cigar_t* const cigar) {
+    cigar_t* const cigar,
+    bool add_last_indel, affine_matrix_type starting_matrix_type) {
   // Clear cigar
   char* cigar_buffer = cigar->operations;
   cigar->begin_offset = 0;
@@ -337,7 +338,7 @@ void wf_backtrace_buffer_unpack_cigar_affine(
   // Traverse-forward the pcigars and unpack the cigar
   const int num_palignment_blocks = vector_get_used(bt_buffer->alignment_packed);
   pcigar_t* const palignment_blocks = vector_get_mem(bt_buffer->alignment_packed,pcigar_t);
-  affine_matrix_type current_matrix_type = affine_matrix_M;
+  affine_matrix_type current_matrix_type = starting_matrix_type;
   for (i=num_palignment_blocks-1;i>=0;--i) {
     // Unpack block
     int cigar_block_length = 0;
@@ -355,8 +356,10 @@ void wf_backtrace_buffer_unpack_cigar_affine(
   v += num_matches;
   h += num_matches;
   // Account for last stroke of insertion/deletion
+  if(add_last_indel){
   while (h < text_length) {*cigar_buffer = 'I'; ++cigar_buffer; ++h;};
   while (v < pattern_length) {*cigar_buffer = 'D'; ++cigar_buffer; ++v;};
+  }
   // Close CIGAR
   *cigar_buffer = '\0';
   cigar->end_offset = cigar_buffer - cigar->operations;

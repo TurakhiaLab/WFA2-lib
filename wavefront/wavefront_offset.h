@@ -42,6 +42,11 @@ typedef uint32_t wf_unsigned_offset_t;
  * Constants
  */
 #define WAVEFRONT_OFFSET_NULL (INT32_MIN/2)
+#define IDX_MISMATCH WAVEFRONT_OFFSET_NULL
+#define IDX_DONT_CARE (-1)
+#define IDX_TYPE_INS (0)
+#define IDX_TYPE_DEL (1)
+#define IDX_TYPE_MIS (2)
 
 /*
  * Translate k and offset to coordinates h,v
@@ -58,4 +63,10 @@ typedef uint32_t wf_unsigned_offset_t;
 
 #define WAVEFRONT_K_INVERSE(k,plen,tlen)  ((tlen)-(plen)-(k))
 
+// Composing idx
+#define COMPOSE_IDX(type,k,score)         ((type)<<30|((k<<8)&0x3fffff00)|(score&0xff))
+// Extracting type,score,and k from idx
+#define TYPE_FROM_IDX(idx)                ((idx>>30)&0x3)
+#define SCORE_FROM_IDX(idx)               (idx&0xff)
+#define K_FROM_IDX(idx)                   ((idx<<2)>>10)
 #endif /* WAVEFRONT_OFFSET_H_ */

@@ -191,11 +191,12 @@ wavefront_t* wavefront_slab_allocate_new(
     wavefront_slab_t* const wavefront_slab,
     const int wf_length_requested,
     const int min_lo,
-    const int max_hi) {
+    const int max_hi,
+    bool past_marking) {
   // Allocate a new wavefront
   mm_allocator_t* const mm_allocator = wavefront_slab->mm_allocator;
   wavefront_t* const wavefront = mm_allocator_alloc(mm_allocator,wavefront_t);
-  wavefront_allocate(wavefront,wf_length_requested,wavefront_slab->allocate_backtrace,mm_allocator);
+  wavefront_allocate(wavefront,wf_length_requested,wavefront_slab->allocate_backtrace,mm_allocator,past_marking);
   vector_insert(wavefront_slab->wavefronts,wavefront,wavefront_t*);
   wavefront_slab->memory_used += wavefront_get_size(wavefront);
   // Init wavefront
@@ -207,12 +208,18 @@ wavefront_t* wavefront_slab_allocate_new(
 wavefront_t* wavefront_slab_allocate_free(
     wavefront_slab_t* const wavefront_slab,
     const int min_lo,
-    const int max_hi) {
+    const int max_hi,
+    bool past_marking) {
   // Parameters
   vector_t* const wavefronts_free = wavefront_slab->wavefronts_free;
   // Reuse wavefront
   wavefront_t* const wavefront = *(vector_get_last_elm(wavefronts_free,wavefront_t*));
   vector_dec_used(wavefronts_free);
+  if (past_marking&&!wavefront->have_idx){
+    wavefront->have_idx=past_marking;
+    wavefront->diag_idx_mem=mm_allocator_calloc(
+      wavefront_slab->mm_allocator,wavefront->wf_elements_allocated,wf_offset_t,false);
+  }
   // Init wavefront
   wavefront->status = wavefront_status_busy;
   wavefront_init(wavefront,min_lo,max_hi);
@@ -222,7 +229,8 @@ wavefront_t* wavefront_slab_allocate_free(
 wavefront_t* wavefront_slab_allocate(
     wavefront_slab_t* const wavefront_slab,
     const int min_lo,
-    const int max_hi) {
+    const int max_hi,
+    bool past_marking) {
   // Parameters
   vector_t* const wavefronts_free = wavefront_slab->wavefronts_free;
   const int wf_length = WAVEFRONT_LENGTH(min_lo,max_hi);
@@ -236,24 +244,24 @@ wavefront_t* wavefront_slab_allocate(
     }
     // Check for a free wavefront (pre-allocated in the slab)
     if (vector_get_used(wavefronts_free) > 0) {
-      return wavefront_slab_allocate_free(wavefront_slab,min_lo,max_hi);
+      return wavefront_slab_allocate_free(wavefront_slab,min_lo,max_hi,past_marking);
     } else {
       // Allocate a new wavefront
       return wavefront_slab_allocate_new(wavefront_slab,
-          wavefront_slab->current_wf_length,min_lo,max_hi);
+          wavefront_slab->current_wf_length,min_lo,max_hi,past_marking);
     }
   } else { // wf_slab_tight
     if (wf_length <= wavefront_slab->init_wf_length) {
       // Check for a free wavefront (pre-allocated in the slab)
       if (vector_get_used(wavefronts_free) > 0) {
-        return wavefront_slab_allocate_free(wavefront_slab,min_lo,max_hi);
+        return wavefront_slab_allocate_free(wavefront_slab,min_lo,max_hi,past_marking);
       } else {
         return wavefront_slab_allocate_new(wavefront_slab,
-            wavefront_slab->init_wf_length,min_lo,max_hi); // Allocate new
+            wavefront_slab->init_wf_length,min_lo,max_hi,past_marking); // Allocate new
       }
     } else {
       return wavefront_slab_allocate_new(wavefront_slab,
-          wf_length,min_lo,max_hi); // Allocate new
+          wf_length,min_lo,max_hi,past_marking); // Allocate new
     }
   }
 }

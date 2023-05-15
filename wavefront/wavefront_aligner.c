@@ -209,6 +209,13 @@ wavefront_aligner_t* wavefront_aligner_new(
         &wf_aligner->wf_components,PATTERN_LENGTH_INIT,TEXT_LENGTH_INIT,
         &wf_aligner->penalties,memory_modular,bt_piggyback,
         wf_aligner->mm_allocator);
+    if (attributes->use_tile){
+      wavefront_components_allocate(
+        &wf_aligner->wf_components_pass_marking,PATTERN_LENGTH_INIT,TEXT_LENGTH_INIT,
+        &wf_aligner->penalties,memory_modular,bt_piggyback,
+        wf_aligner->mm_allocator);
+    }
+    
   }
   // Sequences
   wf_aligner->sequences = NULL;

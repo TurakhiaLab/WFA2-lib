@@ -234,7 +234,7 @@ wavefront_t* wavefront_compute_endsfree_allocate_null(
   int effective_lo, effective_hi;
   wavefront_compute_limits_output(wf_aligner,lo,hi,&effective_lo,&effective_hi);
   // Allocate & initialize
-  wavefront_t* const wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi);
+  wavefront_t* const wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi,true);
   wf_offset_t* const offsets = wavefront->offsets;
   int k;
   for (k=lo+1;k<hi;k++) {
@@ -294,36 +294,77 @@ wavefront_t* wavefront_compute_get_d2wavefront(
           wf_components->d2wavefronts[score_mod]->null) ?
       wf_components->wavefront_null : wf_components->d2wavefronts[score_mod];
 }
+wavefront_t* fetch_wavefront_from_conv_idx(wavefront_aligner_t* const wf_aligner,wf_offset_t idx){
+    if (wf_aligner->pattern_length==4059&&wf_aligner->text_length==3938)
+  {
+    //raise(SIGTRAP);
+  }
+  
+  wavefront_components_t* const wf_components=&wf_aligner->wf_components;
+  int type=TYPE_FROM_IDX(idx);
+  int score=SCORE_FROM_IDX(idx)+wf_aligner->marking_score;
+  int k=K_FROM_IDX(idx);
+  if(COMPOSE_IDX(type,k,SCORE_FROM_IDX(idx))!=idx){
+    raise(SIGTRAP);
+  }
+  if (wf_aligner->wf_components.memory_modular) {
+    score = score % wf_aligner->wf_components.max_score_scope;
+  }
+  switch (type)
+  {
+  case IDX_TYPE_INS:
+    return wavefront_compute_get_i1wavefront(wf_components,score);    
+  case IDX_TYPE_DEL:
+    return wavefront_compute_get_d1wavefront(wf_components,score);    
+  case IDX_TYPE_MIS:
+    return wavefront_compute_get_mwavefront(wf_components,score);    
+  default:
+    raise(SIGTRAP);
+  }
+  
+}
 void wavefront_compute_fetch_input(
     wavefront_aligner_t* const wf_aligner,
     wavefront_set_t* const wavefront_set,
     const int score) {
+  if (score==55&&wf_aligner->pattern_length==13085&&wf_aligner->text_length==12785)
+  {
+    putc('a',stdout);
+  }
+  
+  int switch_threshold=wf_aligner->marking_score+wf_aligner->wf_components.max_score_scope-1;
   // Parameters
-  wavefront_components_t* const wf_components = &wf_aligner->wf_components;
   const distance_metric_t distance_metric = wf_aligner->penalties.distance_metric;
   // Compute scores
   const wavefront_penalties_t* const penalties = &(wf_aligner->penalties);
   if (distance_metric == gap_linear) {
     int mismatch = score - penalties->mismatch;
+    bool mismatch_passed=mismatch>switch_threshold;
     int gap_open1 = score - penalties->gap_opening1;
+    bool gap_open1_passed=gap_open1>switch_threshold;
     // Modular wavefront
-    if (wf_components->memory_modular) {
-      const int max_score_scope = wf_components->max_score_scope;
+    if (wf_aligner->wf_components.memory_modular) {
+      const int max_score_scope = wf_aligner->wf_components.max_score_scope;
       if (mismatch > 0) mismatch =  mismatch % max_score_scope;
       if (gap_open1 > 0) gap_open1 = gap_open1 % max_score_scope;
     }
     // Fetch wavefronts
-    wavefront_set->in_mwavefront_misms = wavefront_compute_get_mwavefront(wf_components,mismatch);
-    wavefront_set->in_mwavefront_open1 = wavefront_compute_get_mwavefront(wf_components,gap_open1);
+    wavefront_set->in_mwavefront_misms = wavefront_compute_get_mwavefront(mismatch_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,mismatch);
+    wavefront_set->in_mwavefront_open1 = wavefront_compute_get_mwavefront(gap_open1_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_open1);
   } else { // distance_metric == gap_affine || distance_metric == gap_affine_2p
     int mismatch = score - penalties->mismatch;
+    bool mismatch_passed=mismatch>switch_threshold;
     int gap_open1 = score - penalties->gap_opening1 - penalties->gap_extension1;
+    bool gap_open1_passed=gap_open1>switch_threshold;
     int gap_extend1 = score - penalties->gap_extension1;
+    bool gap_extend1_passed=gap_extend1>switch_threshold;
     int gap_open2 = score - penalties->gap_opening2 - penalties->gap_extension2;
+    bool gap_open2_passed=gap_open2>switch_threshold;
     int gap_extend2 = score - penalties->gap_extension2;
+    bool gap_extend2_passed=gap_extend2>switch_threshold;
     // Modular wavefront
-    if (wf_components->memory_modular) {
-      const int max_score_scope = wf_components->max_score_scope;
+    if (wf_aligner->wf_components.memory_modular) {
+      const int max_score_scope = wf_aligner->wf_components.max_score_scope;
       if (mismatch > 0) mismatch =  mismatch % max_score_scope;
       if (gap_open1 > 0) gap_open1 = gap_open1 % max_score_scope;
       if (gap_extend1 > 0) gap_extend1 = gap_extend1 % max_score_scope;
@@ -331,14 +372,14 @@ void wavefront_compute_fetch_input(
       if (gap_extend2 > 0) gap_extend2 = gap_extend2 % max_score_scope;
     }
     // Fetch wavefronts
-    wavefront_set->in_mwavefront_misms = wavefront_compute_get_mwavefront(wf_components,mismatch);
-    wavefront_set->in_mwavefront_open1 = wavefront_compute_get_mwavefront(wf_components,gap_open1);
-    wavefront_set->in_i1wavefront_ext = wavefront_compute_get_i1wavefront(wf_components,gap_extend1);
-    wavefront_set->in_d1wavefront_ext = wavefront_compute_get_d1wavefront(wf_components,gap_extend1);
+    wavefront_set->in_mwavefront_misms = wavefront_compute_get_mwavefront(mismatch_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,mismatch);
+    wavefront_set->in_mwavefront_open1 = wavefront_compute_get_mwavefront(gap_open1_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_open1);
+    wavefront_set->in_i1wavefront_ext = wavefront_compute_get_i1wavefront(gap_extend1_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_extend1);
+    wavefront_set->in_d1wavefront_ext = wavefront_compute_get_d1wavefront(gap_extend1_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_extend1);
     if (distance_metric == gap_affine) return;
-    wavefront_set->in_mwavefront_open2 = wavefront_compute_get_mwavefront(wf_components,gap_open2);
-    wavefront_set->in_i2wavefront_ext = wavefront_compute_get_i2wavefront(wf_components,gap_extend2);
-    wavefront_set->in_d2wavefront_ext = wavefront_compute_get_d2wavefront(wf_components,gap_extend2);
+    wavefront_set->in_mwavefront_open2 = wavefront_compute_get_mwavefront(gap_open2_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_open2);
+    wavefront_set->in_i2wavefront_ext = wavefront_compute_get_i2wavefront(gap_extend2_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_extend2);
+    wavefront_set->in_d2wavefront_ext = wavefront_compute_get_d2wavefront(gap_extend2_passed?&wf_aligner->wf_components_pass_marking:&wf_aligner->wf_components,gap_extend2);
   }
 }
 /*
@@ -346,9 +387,9 @@ void wavefront_compute_fetch_input(
  */
 void wavefront_compute_free_output(
     wavefront_aligner_t* const wf_aligner,
+    wavefront_components_t* const wf_components,
     const int score_mod) {
   // Parameters
-  wavefront_components_t* const wf_components = &wf_aligner->wf_components;
   const distance_metric_t distance_metric = wf_aligner->penalties.distance_metric;
   wavefront_slab_t* const wavefront_slab = wf_aligner->wavefront_slab;
   // Free
@@ -375,12 +416,15 @@ void wavefront_compute_allocate_output_null(
     const int score) {
   // Parameters
   const distance_metric_t distance_metric = wf_aligner->penalties.distance_metric;
-  wavefront_components_t* const wf_components = &wf_aligner->wf_components;
+  wavefront_components_t* const wf_components = 
+  (score>=wf_aligner->marking_score+wf_aligner->wf_components.max_score_scope)?
+  &wf_aligner->wf_components_pass_marking
+  :&wf_aligner->wf_components;
   // Modular wavefront
   int score_mod = score;
   if (wf_components->memory_modular) {
     score_mod = score % wf_components->max_score_scope;
-    wavefront_compute_free_output(wf_aligner,score_mod);
+    wavefront_compute_free_output(wf_aligner,wf_components,score_mod);
   }
   // Consider ends-free (M!=0)
   if (wavefront_compute_endsfree_required(wf_aligner,score)) {
@@ -402,9 +446,18 @@ void wavefront_compute_allocate_output(
     wavefront_set_t* const wavefront_set,
     const int score,
     const int lo,
-    const int hi) {
+    const int hi,
+    bool past_marking) {
+  if (score==36)
+  {
+    //raise(SIGTRAP);
+  }
   // Parameters
-  wavefront_components_t* const wf_components = &wf_aligner->wf_components;
+  wavefront_components_t* wf_components =&wf_aligner->wf_components;
+  if (score>=(wf_aligner->marking_score+wf_aligner->wf_components.max_score_scope)){
+    wf_components=&wf_aligner->wf_components_pass_marking;
+  }
+  
   const distance_metric_t distance_metric = wf_aligner->penalties.distance_metric;
   wavefront_slab_t* const wavefront_slab = wf_aligner->wavefront_slab;
   // Consider ends-free (M!=0)
@@ -428,7 +481,7 @@ void wavefront_compute_allocate_output(
   int score_mod = score;
   if (wf_components->memory_modular) {
     score_mod = score % wf_components->max_score_scope;
-    wavefront_compute_free_output(wf_aligner,score_mod);
+    wavefront_compute_free_output(wf_aligner,wf_components,score_mod);
   }
   // Check
   if (score_mod >= wf_components->num_wavefronts) {
@@ -436,14 +489,14 @@ void wavefront_compute_allocate_output(
     exit(1);
   }
   // Allocate M-Wavefront
-  wavefront_set->out_mwavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi);
+  wavefront_set->out_mwavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi,past_marking);
   wf_components->mwavefronts[score_mod] = wavefront_set->out_mwavefront;
   wf_components->mwavefronts[score_mod]->lo = lo;
   wf_components->mwavefronts[score_mod]->hi = hi;
   if (distance_metric == gap_linear) return;
   // Allocate I1-Wavefront
   if (!wavefront_set->in_mwavefront_open1->null || !wavefront_set->in_i1wavefront_ext->null) {
-    wavefront_set->out_i1wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi);
+    wavefront_set->out_i1wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi,past_marking);
     wf_components->i1wavefronts[score_mod] = wavefront_set->out_i1wavefront;
     wf_components->i1wavefronts[score_mod]->lo = lo;
     wf_components->i1wavefronts[score_mod]->hi = hi;
@@ -453,7 +506,7 @@ void wavefront_compute_allocate_output(
   }
   // Allocate D1-Wavefront
   if (!wavefront_set->in_mwavefront_open1->null || !wavefront_set->in_d1wavefront_ext->null) {
-    wavefront_set->out_d1wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi);
+    wavefront_set->out_d1wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi,past_marking);
     wf_components->d1wavefronts[score_mod] = wavefront_set->out_d1wavefront;
     wf_components->d1wavefronts[score_mod]->lo = lo;
     wf_components->d1wavefronts[score_mod]->hi = hi;
@@ -464,7 +517,7 @@ void wavefront_compute_allocate_output(
   if (distance_metric == gap_affine) return;
   // Allocate I2-Wavefront
   if (!wavefront_set->in_mwavefront_open2->null || !wavefront_set->in_i2wavefront_ext->null) {
-    wavefront_set->out_i2wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi);
+    wavefront_set->out_i2wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi,past_marking);
     wf_components->i2wavefronts[score_mod] = wavefront_set->out_i2wavefront;
     wf_components->i2wavefronts[score_mod]->lo = lo;
     wf_components->i2wavefronts[score_mod]->hi = hi;
@@ -474,7 +527,7 @@ void wavefront_compute_allocate_output(
   }
   // Allocate D2-Wavefront
   if (!wavefront_set->in_mwavefront_open2->null || !wavefront_set->in_d2wavefront_ext->null) {
-    wavefront_set->out_d2wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi);
+    wavefront_set->out_d2wavefront = wavefront_slab_allocate(wavefront_slab,effective_lo,effective_hi,past_marking);
     wf_components->d2wavefronts[score_mod] = wavefront_set->out_d2wavefront;
     wf_components->d2wavefronts[score_mod]->lo = lo;
     wf_components->d2wavefronts[score_mod]->hi = hi;
@@ -497,6 +550,9 @@ void wavefront_compute_init_ends_wf_lower(
   int k;
   for (k=min_lo;k<min_init;++k) {
     offsets[k] = WAVEFRONT_OFFSET_NULL;
+    if (wavefront->have_idx){
+      wavefront->diag_idx[k]=IDX_DONT_CARE;
+    }
   }
   // Set new minimum
   wavefront->wf_elements_init_min = min_lo;
@@ -512,6 +568,9 @@ void wavefront_compute_init_ends_wf_higher(
   int k;
   for (k=max_init+1;k<=max_hi;++k) {
     offsets[k] = WAVEFRONT_OFFSET_NULL;
+    if (wavefront->have_idx){
+      wavefront->diag_idx[k]=IDX_DONT_CARE;
+    }
   }
   // Set new maximum
   wavefront->wf_elements_init_max = max_hi;

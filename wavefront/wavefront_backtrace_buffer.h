@@ -142,7 +142,9 @@ void wf_backtrace_buffer_unpack_cigar_affine(
     const int begin_h,
     const int end_v,
     const int end_h,
-    cigar_t* const cigar);
+    cigar_t* const cigar,
+    bool add_last_indel,
+    affine_matrix_type starting_matrix_type);
 
 /*
  * Compact

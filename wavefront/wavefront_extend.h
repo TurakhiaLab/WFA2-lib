@@ -50,5 +50,10 @@ int wavefront_extend_endsfree(
 int wavefront_extend_custom(
     wavefront_aligner_t* const wf_aligner,
     const int score);
-
+int wavefront_extend_end2end_no_cutoff(
+    wavefront_aligner_t* const wf_aligner,
+    const int score);
+void wavefront_reduce(
+    wavefront_aligner_t* const wf_aligner,
+    const int score);
 #endif /* WAVEFRONT_EXTEND_H_ */

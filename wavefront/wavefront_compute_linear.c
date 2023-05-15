@@ -180,7 +180,7 @@ void wavefront_compute_linear(
   int hi, lo;
   wavefront_compute_limits_input(wf_aligner,&wavefront_set,&lo,&hi);
   // Allocate wavefronts
-  wavefront_compute_allocate_output(wf_aligner,&wavefront_set,score,lo,hi);
+  wavefront_compute_allocate_output(wf_aligner,&wavefront_set,score,lo,hi,false);
   // Init wavefront ends
   wavefront_compute_init_ends(wf_aligner,&wavefront_set,lo,hi);
   // Compute Wavefronts
