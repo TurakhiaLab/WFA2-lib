@@ -77,8 +77,9 @@ void wavefront_compute_allocate_output(
     wavefront_set_t* const wavefront_set,
     const int score,
     const int lo,
-    const int hi);
-
+    const int hi,
+    bool past_marking);
+wavefront_t* fetch_wavefront_from_conv_idx(wavefront_aligner_t* const wf_aligner,wf_offset_t idx);
 /*
  * Initialize wavefronts ends
  */

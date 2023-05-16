@@ -61,6 +61,10 @@ typedef struct {
   // Wavefront elements
   wf_offset_t* offsets;                // Offsets (k-centered)
   wf_offset_t* offsets_mem;            // Offsets base memory (Internal)
+  // convergence idx
+  bool have_idx;                       // Whether it is on or passed marking anti-diagonal
+  wf_offset_t* diag_idx;                // Marked diagonal index
+  wf_offset_t* diag_idx_mem;            // Diagonal index memory (Internal)
   // Piggyback backtrace
   int bt_occupancy_max;                // Maximum number of pcigar-ops stored on the Backtrace-block
   pcigar_t* bt_pcigar;                 // Backtrace-block pcigar (k-centered)
@@ -103,11 +107,13 @@ void wavefront_allocate(
     wavefront_t* const wavefront,
     const int wf_elements_allocated,
     const bool allocate_backtrace,
-    mm_allocator_t* const mm_allocator);
+    mm_allocator_t* const mm_allocator,
+    bool past_marking);
 void wavefront_resize(
     wavefront_t* const wavefront,
     const int wf_elements_allocated,
-    mm_allocator_t* const mm_allocator);
+    mm_allocator_t* const mm_allocator,
+    bool past_marking);
 void wavefront_free(
     wavefront_t* const wavefront,
     mm_allocator_t* const mm_allocator);

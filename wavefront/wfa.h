@@ -106,6 +106,7 @@ typedef struct _wavefront_aligner_t {
   wavefront_memory_t memory_mode;             // Wavefront memory strategy (modular wavefronts and piggyback)
   // Wavefront components
   wavefront_components_t wf_components;       // Wavefront components
+  wavefront_components_t wf_components_pass_marking;       // Wavefront components
   affine2p_matrix_type component_begin;       // Alignment begin component
   affine2p_matrix_type component_end;         // Alignment end component
   wavefront_pos_t alignment_end_pos;          // Alignment end position
@@ -121,6 +122,9 @@ typedef struct _wavefront_aligner_t {
   wavefront_plot_t* plot;                     // Wavefront plot
   // System
   alignment_system_t system;                  // System related parameters
+  int marking_score;
+  //Debug
+  int heuristic_criteria;
 } wavefront_aligner_t;
 
 /*
@@ -224,7 +228,11 @@ void wavefront_aligner_print_mode(
 /*
  * Wavefront Alignment
  */
-
+typedef struct {
+    int pre_marking_cells;
+    int post_marking_cells;
+    int longest_wavefront;
+} Effi_Stats_t;
 int wavefront_align(
     wavefront_aligner_t* const wf_aligner,
     const char* const pattern,
@@ -233,3 +241,10 @@ int wavefront_align(
     const int text_length);
 int wavefront_align_resume(
     wavefront_aligner_t* const wf_aligner);
+int wavefront_tile(
+    wavefront_aligner_t* const wf_aligner,char** out_cigar,int * cigar_valid_len,
+    const char* const pattern,
+    const int pattern_length,
+    const char* const text,
+    const int text_length,
+    Effi_Stats_t* stats);

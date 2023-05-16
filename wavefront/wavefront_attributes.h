@@ -150,6 +150,7 @@ typedef struct {
   wavefront_plot_attr_t plot;              // Plot wavefront
   // System
   alignment_system_t system;               // System related parameters
+  bool use_tile;
 } wavefront_aligner_attr_t;
 
 /*

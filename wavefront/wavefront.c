@@ -40,11 +40,17 @@ void wavefront_allocate(
     wavefront_t* const wavefront,
     const int wf_elements_allocated,
     const bool allocate_backtrace,
-    mm_allocator_t* const mm_allocator) {
+    mm_allocator_t* const mm_allocator,
+    bool past_marking) {
   // Allocate memory
   wavefront->wf_elements_allocated = wf_elements_allocated;
   wavefront->offsets_mem = mm_allocator_calloc(
       mm_allocator,wf_elements_allocated,wf_offset_t,false);
+  wavefront->have_idx=past_marking;
+  if (past_marking){
+    wavefront->diag_idx_mem=mm_allocator_calloc(
+      mm_allocator,wf_elements_allocated,wf_offset_t,false);
+  }
   if (allocate_backtrace) {
     wavefront->bt_pcigar_mem = mm_allocator_calloc(
         mm_allocator,wf_elements_allocated,pcigar_t,false);
@@ -57,13 +63,20 @@ void wavefront_allocate(
 void wavefront_resize(
     wavefront_t* const wavefront,
     const int wf_elements_allocated,
-    mm_allocator_t* const mm_allocator) {
+    mm_allocator_t* const mm_allocator,
+    bool past_marking) {
   // Set new size
   wavefront->wf_elements_allocated = wf_elements_allocated;
   // Reallocate offsets (Content is lost)
   mm_allocator_free(mm_allocator,wavefront->offsets_mem);
   wavefront->offsets_mem = mm_allocator_calloc(
       mm_allocator,wf_elements_allocated,wf_offset_t,false);
+  // Reallocate marking index (Content is lost)
+  wavefront->have_idx=past_marking;
+  if (past_marking){
+    wavefront->diag_idx_mem=mm_allocator_calloc(
+      mm_allocator,wf_elements_allocated,wf_offset_t,false);
+  }
   // Reallocate backtrace (Content is lost)
   if (wavefront->bt_pcigar_mem) {
     mm_allocator_free(mm_allocator,wavefront->bt_pcigar_mem);
@@ -78,6 +91,9 @@ void wavefront_free(
     wavefront_t* const wavefront,
     mm_allocator_t* const mm_allocator) {
   mm_allocator_free(mm_allocator,wavefront->offsets_mem);
+  if (wavefront->have_idx){
+    mm_allocator_free(mm_allocator,wavefront->diag_idx_mem);
+  }  
   if (wavefront->bt_pcigar_mem) {
     mm_allocator_free(mm_allocator,wavefront->bt_pcigar_mem);
     mm_allocator_free(mm_allocator,wavefront->bt_prev_mem);
@@ -96,6 +112,7 @@ void wavefront_init(
   wavefront->hi = -1;
   // Elements
   wavefront->offsets = wavefront->offsets_mem - min_lo; // Center at k=0
+  wavefront->diag_idx = wavefront->diag_idx_mem - min_lo; // Center at k=0
   if (wavefront->bt_pcigar_mem) {
     wavefront->bt_occupancy_max = 0;
     wavefront->bt_pcigar = wavefront->bt_pcigar_mem - min_lo; // Center at k=0
@@ -117,6 +134,7 @@ void wavefront_init_null(
   wavefront->hi = -1;
   // Elements
   wavefront->offsets = wavefront->offsets_mem - min_lo; // Center at k=0
+  wavefront->diag_idx = wavefront->diag_idx_mem - min_lo; // Center at k=0
   if (wavefront->bt_pcigar_mem) {
     wavefront->bt_occupancy_max = 0;
     wavefront->bt_pcigar = wavefront->bt_pcigar_mem - min_lo; // Center at k=0
@@ -127,6 +145,7 @@ void wavefront_init_null(
   int i;
   for (i=0;i<wf_elements;++i) {
     wavefront->offsets_mem[i] = WAVEFRONT_OFFSET_NULL;
+    wavefront->diag_idx_mem[i] = IDX_DONT_CARE;
   }
   if (wavefront->bt_pcigar_mem) { // TODO: Really needed?
     memset(wavefront->bt_pcigar_mem,0,wf_elements*sizeof(pcigar_t));
@@ -167,6 +186,10 @@ void wavefront_set_limits(
 uint64_t wavefront_get_size(
     wavefront_t* const wavefront) {
   uint64_t total_size = wavefront->wf_elements_allocated*sizeof(wf_offset_t);
+  if (wavefront->have_idx){
+    total_size += wavefront->wf_elements_allocated*sizeof(wf_offset_t);
+  }
+  
   if (wavefront->bt_pcigar_mem) {
     total_size += wavefront->wf_elements_allocated*(sizeof(pcigar_t)+sizeof(bt_block_idx_t));
   }

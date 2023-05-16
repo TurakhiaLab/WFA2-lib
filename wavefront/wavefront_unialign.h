@@ -73,6 +73,12 @@ void wavefront_unialign_print_status(
     FILE* const stream,
     wavefront_aligner_t* const wf_aligner,
     const int current_score);
-
+void wavefront_align_unidirectional_cleanup(
+    wavefront_aligner_t* const wf_aligner);
+wf_offset_t accumulate_converge_idx(wf_offset_t a,wf_offset_t b);
+wf_offset_t test_converged_score(wavefront_aligner_t* const wf_aligner, int score);
+void wavefront_unialign_terminate(
+    wavefront_aligner_t* const wf_aligner,
+    const int score);
 #endif /* WAVEFRONT_UNIALIGN_H_ */
 

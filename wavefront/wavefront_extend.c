@@ -306,7 +306,10 @@ int wavefront_extend_end2end_max(
   const int score_mod = (memory_modular) ? score % max_score_scope : score;
   *max_antidiagonal = 0; // Init
   // Fetch m-wavefront
-  wavefront_t* const mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  wavefront_t* mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  if (score>=(wf_aligner->marking_score+max_score_scope)){
+    mwavefront = wf_aligner->wf_components_pass_marking.mwavefronts[score_mod];
+  }  
   if (mwavefront == NULL) {
     // Check alignment feasibility (for heuristic variants that can lead to no solution)
     if (wf_aligner->align_status.num_null_steps > wf_aligner->wf_components.max_score_scope) {
@@ -356,7 +359,7 @@ int wavefront_extend_end2end_max(
   *max_antidiagonal = max_antidiag;
   return 0; // Not done
 }
-int wavefront_extend_end2end(
+int wavefront_extend_end2end_no_cutoff(
     wavefront_aligner_t* const wf_aligner,
     const int score) {
   // Compute score
@@ -364,7 +367,10 @@ int wavefront_extend_end2end(
   const int max_score_scope = wf_aligner->wf_components.max_score_scope;
   const int score_mod = (memory_modular) ? score % max_score_scope : score;
   // Fetch m-wavefront
-  wavefront_t* const mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  wavefront_t* mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  if (score>=(wf_aligner->marking_score+max_score_scope)){
+    mwavefront = wf_aligner->wf_components_pass_marking.mwavefronts[score_mod];
+  }  
   if (mwavefront == NULL) {
     // Check alignment feasibility (for heuristic variants that can lead to no solution)
     if (wf_aligner->align_status.num_null_steps > wf_aligner->wf_components.max_score_scope) {
@@ -402,9 +408,26 @@ int wavefront_extend_end2end(
     return 1; // Done
   }
   // Cut-off wavefront heuristically
+}
+void wavefront_reduce(
+    wavefront_aligner_t* const wf_aligner,
+    const int score) {
+  const bool memory_modular = wf_aligner->wf_components.memory_modular;
+  const int max_score_scope = wf_aligner->wf_components.max_score_scope;
+  const int score_mod = (memory_modular) ? score % max_score_scope : score;
   if (wf_aligner->heuristic.strategy != wf_heuristic_none) {
     wavefront_heuristic_cufoff(wf_aligner,score,score_mod);
   }
+}
+int wavefront_extend_end2end(
+    wavefront_aligner_t* const wf_aligner,
+    const int score) {
+  int extend_ret=wavefront_extend_end2end_no_cutoff(wf_aligner,score);
+  if (extend_ret)
+  {
+    return extend_ret;
+  }
+  wavefront_reduce(wf_aligner,score);
   return 0; // Not done
 }
 int wavefront_extend_endsfree(
@@ -415,7 +438,10 @@ int wavefront_extend_endsfree(
   const int max_score_scope = wf_aligner->wf_components.max_score_scope;
   const int score_mod = (memory_modular) ? score % max_score_scope : score;
   // Fetch m-wavefront
-  wavefront_t* const mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  wavefront_t* mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  if (score>=(wf_aligner->marking_score+max_score_scope)){
+    mwavefront = wf_aligner->wf_components_pass_marking.mwavefronts[score_mod];
+  }
   if (mwavefront == NULL) {
     // Check alignment feasibility (for heuristic variants that can lead to no solution)
     if (wf_aligner->align_status.num_null_steps > wf_aligner->wf_components.max_score_scope) {
@@ -466,7 +492,10 @@ int wavefront_extend_custom(
   const int max_score_scope = wf_aligner->wf_components.max_score_scope;
   const int score_mod = (memory_modular) ? score % max_score_scope : score;
   // Fetch m-wavefront
-  wavefront_t* const mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  wavefront_t* mwavefront = wf_aligner->wf_components.mwavefronts[score_mod];
+  if (score>=(wf_aligner->marking_score+max_score_scope)){
+    mwavefront = wf_aligner->wf_components_pass_marking.mwavefronts[score_mod];
+  }  
   if (mwavefront == NULL) {
     // Check alignment feasibility (for heuristic variants that can lead to no solution)
     if (wf_aligner->align_status.num_null_steps > wf_aligner->wf_components.max_score_scope) {

@@ -214,12 +214,12 @@ void wavefront_components_allocate(
       max_pattern_length,max_text_length,penalties->distance_metric);
   // Allocate victim wavefront (outside slab)
   wavefront_t* const wavefront_victim = mm_allocator_alloc(mm_allocator,wavefront_t);
-  wavefront_allocate(wavefront_victim,WF_NULL_INIT_LENGTH,bt_piggyback,mm_allocator);
+  wavefront_allocate(wavefront_victim,WF_NULL_INIT_LENGTH,bt_piggyback,mm_allocator,false);
   wavefront_init_victim(wavefront_victim,WF_NULL_INIT_LO,WF_NULL_INIT_HI);
   wf_components->wavefront_victim = wavefront_victim;
   // Allocate null wavefront (outside slab)
   wavefront_t* const wavefront_null = mm_allocator_alloc(mm_allocator,wavefront_t);
-  wavefront_allocate(wavefront_null,WF_NULL_INIT_LENGTH,bt_piggyback,mm_allocator);
+  wavefront_allocate(wavefront_null,WF_NULL_INIT_LENGTH,bt_piggyback,mm_allocator,true);
   wavefront_init_null(wavefront_null,WF_NULL_INIT_LO,WF_NULL_INIT_HI);
   wf_components->wavefront_null = wavefront_null;
   // BT-Buffer
@@ -314,10 +314,10 @@ void wavefront_components_resize_null__victim(
     const int proposed_hi = hi + wf_inc/2;
     const int proposed_wavefront_length = WAVEFRONT_LENGTH(proposed_lo,proposed_hi);
     // Reallocate victim wavefront
-    wavefront_resize(wf_components->wavefront_victim,proposed_wavefront_length,mm_allocator);
+    wavefront_resize(wf_components->wavefront_victim,proposed_wavefront_length,mm_allocator,true);
     wavefront_init_victim(wf_components->wavefront_victim,proposed_lo,proposed_hi);
     // Allocate null wavefront
-    wavefront_resize(wf_components->wavefront_null,proposed_wavefront_length,mm_allocator);
+    wavefront_resize(wf_components->wavefront_null,proposed_wavefront_length,mm_allocator,true);
     wavefront_init_null(wf_components->wavefront_null,proposed_lo,proposed_hi);
   }
 }
