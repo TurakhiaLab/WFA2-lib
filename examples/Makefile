@@ -21,6 +21,7 @@ examples_c: *.c $(LIB_WFA)
 examples_cpp: *.cpp $(LIB_WFA)
 	$(CPP) $(CC_FLAGS) -L$(FOLDER_LIB) -I$(FOLDER_WFA) wfa_bindings.cpp -o $(FOLDER_BIN)/wfa_bindings -lwfacpp $(LIBS)
 	$(CPP) $(CC_FLAGS) -L$(FOLDER_LIB) -I$(FOLDER_WFA) wfa_lambda.cpp -o $(FOLDER_BIN)/wfa_lambda -lwfacpp $(LIBS)
+	$(CPP) $(CC_FLAGS) -L$(FOLDER_LIB) -I$(FOLDER_WFA) wfa_tile.cpp -o $(FOLDER_BIN)/wfa_tile -lwfacpp $(LIBS)
 	
 setup:
 	@mkdir -p $(FOLDER_BIN)
